@@ -1,34 +1,29 @@
-name: Code check & deploy
+name: Semgrep and Deploy Report
 
 on:
   push:
     branches:
       - main
 
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
 jobs:
-  build-and-deploy:
+  semgrep-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
+      - name: Install Semgrep
+        run: pip install semgrep
 
-      - name: Install dependencies
-        run: npm ci
-
-      # Run Semgrep and save results in JSON
       - name: Run Semgrep Scan
-        run: |
-          pip install semgrep
-          semgrep --config p/javascript --json > semgrep-report.json
+        run: semgrep --config p/javascript --json > semgrep-report.json
 
-      # Create a simple HTML wrapper for JSON
       - name: Build Semgrep Report Page
         run: |
           mkdir report
@@ -36,23 +31,8 @@ jobs:
           cat semgrep-report.json >> report/index.html
           echo "</pre></body></html>" >> report/index.html
 
-      # Deploy report to GitHub Pages
       - name: Deploy Report to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./report
-
-      # - name: Build Vite project
-      #   run: npm run build
-
-      # - name: List build output (Temp)
-      #   run: ls dist
-
-      # - name: Deploy to Cloudflare Pages
-      #   uses: cloudflare/pages-action@v1
-      #   with:
-      #     apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      #     accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      #     projectName: hackp-2025-take-it-down-frontend
-      #     directory: ./dist
