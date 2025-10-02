@@ -24,12 +24,67 @@ jobs:
       - name: Run Semgrep Scan
         run: semgrep --config p/javascript --json > semgrep-report.json
 
+      # - name: Build Semgrep Report Page
+      #   run: |
+      #     mkdir report
+      #     echo "<html><head><title>Semgrep Report</title></head><body><h1>Semgrep Scan Report</h1><pre>" > report/index.html
+      #     cat semgrep-report.json >> report/index.html
+      #     echo "</pre></body></html>" >> report/index.html
+
       - name: Build Semgrep Report Page
         run: |
           mkdir report
-          echo "<html><head><title>Semgrep Report</title></head><body><h1>Semgrep Scan Report</h1><pre>" > report/index.html
-          cat semgrep-report.json >> report/index.html
-          echo "</pre></body></html>" >> report/index.html
+          cp semgrep-report.json report/semgrep-report.json
+
+          cat > report/index.html <<'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <title>Semgrep Report</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; background: #f4f6f9; }
+              h1 { text-align: center; color: #333; }
+              table { border-collapse: collapse; width: 100%; margin-top: 20px; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+              th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+              th { background: #007acc; color: #fff; }
+              tr:nth-child(even) { background: #f9f9f9; }
+              .severity-error { color: #d9534f; font-weight: bold; }
+              .severity-warning { color: #f0ad4e; font-weight: bold; }
+              .severity-info { color: #5bc0de; font-weight: bold; }
+            </style>
+          </head>
+          <body>
+            <h1>🔍 Semgrep Scan Report</h1>
+            <div id="report"></div>
+            <script>
+              fetch('semgrep-report.json')
+                .then(res => res.json())
+                .then(data => {
+                  if (!data.results || data.results.length === 0) {
+                    document.getElementById('report').innerHTML = "<p>No findings 🎉</p>";
+                    return;
+                  }
+
+                  let html = "<table><tr><th>Rule</th><th>Severity</th><th>Message</th><th>File</th><th>Line</th></tr>";
+                  data.results.forEach(r => {
+                    let sev = r.extra.severity || "info";
+                    html += "<tr>" +
+                              "<td>" + r.check_id + "</td>" +
+                              "<td class='severity-" + sev.toLowerCase() + "'>" + sev + "</td>" +
+                              "<td>" + r.extra.message + "</td>" +
+                              "<td>" + r.path + "</td>" +
+                              "<td>" + r.start.line + "</td>" +
+                            "</tr>";
+                  });
+                  html += "</table>";
+                  document.getElementById('report').innerHTML = html;
+                });
+            </script>
+          </body>
+          </html>
+          EOF
+
 
       # Upload artifact for Pages
       - name: Upload artifact
