@@ -31,11 +31,19 @@ jobs:
           cat semgrep-report.json >> report/index.html
           echo "</pre></body></html>" >> report/index.html
 
-      - name: Deploy Report to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      # Upload artifact for Pages
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./report
-      
-      - name: List dir (Temp,CBR)
-        run: ls; ls ./report
+          path: ./report
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: semgrep-and-deploy
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
